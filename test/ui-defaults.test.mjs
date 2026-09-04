@@ -1418,8 +1418,8 @@ test("the marketing card states its pitch as a list rather than a paragraph", ()
     const list = markup.match(/<ul class="pitch-list muted">[\s\S]*?<\/ul>/)?.[0];
     assert.ok(list, "the pitch list is missing");
     assert.equal((list.match(/<li[\s>]/g) || []).length, 4);
-    assert.match(list, /<li[^>]*>Save this air-gapped bitcoin calculator to a removable drive/);
-    assert.match(list, /<li[^>]*>Keep your private keys offline\.<\/li>/);
+    assert.match(list, /<li[^>]*>You bring the entropy (?:—|\u2014) dice rolls, a seed phrase, or a key you already have\.<\/li>/);
+    assert.match(list, /<li[^>]*>The official project remains https:\/\/github\.com\/OogaBoogaX\/entropylab\.<\/li>/);
     // The prose it replaced is gone, not merely hidden.
     assert.doesNotMatch(markup, /A signing device is only required when you spend/);
   }

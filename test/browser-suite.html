@@ -268,17 +268,21 @@
     const select = document.getElementById("locale-select");
     assert(select, "Locale select is missing");
     const pitchItem = document.querySelector(".pitch-list li");
+    const kicker = document.querySelector(".kicker");
     const betaBanner = document.querySelector(".beta-warning-text");
     const download = document.querySelector(".download-html");
     const modeOption = document.querySelector("#key-mode-select option");
-    assert(pitchItem && betaBanner && download && modeOption, "Fixture elements for the locale switch are missing");
-    equal(pitchItem.textContent, "Save this air-gapped bitcoin calculator to a removable drive and open it on a computer that never goes online.", "Pitch starts in English");
+    assert(pitchItem && kicker && betaBanner && download && modeOption, "Fixture elements for the locale switch are missing");
+    equal(pitchItem.textContent, "You bring the entropy — dice rolls, a seed phrase, or a key you already have.", "Pitch starts in English");
     select.value = "es";
     select.dispatchEvent(new Event("change", { bubbles: true }));
     await wait(0);
     // Static shell text, a rich (markup-bearing) block, an aria-label, and a
-    // t()-rendered dynamic label all follow the switch.
-    equal(pitchItem.textContent, "Guarda esta calculadora de bitcoin aislada de internet en una unidad extraíble y ábrela en una computadora que nunca se conecte a internet.", "Static shell text did not translate");
+    // t()-rendered dynamic label all follow the switch. New pitch lines are
+    // not in the catalogs yet, so the still-translated kicker is the static
+    // shell fixture; the pitch falls back to English.
+    equal(kicker.textContent, "Ejecuta sin conexión · Trae tu propia entropía", "Static shell text did not translate");
+    equal(pitchItem.textContent, "You bring the entropy — dice rolls, a seed phrase, or a key you already have.", "Missing catalog keys must fall back to English");
     assert(betaBanner.querySelector("strong")?.textContent === "Software en beta", "Rich banner did not translate: " + betaBanner.textContent);
     equal(download.getAttribute("aria-label"), "Descargar EntropyLab", "aria-label did not translate");
     equal(modeOption.textContent, "Tiradas de dados", "The method dropdown did not re-render in Spanish");
@@ -286,7 +290,8 @@
     select.value = "en";
     select.dispatchEvent(new Event("change", { bubbles: true }));
     await wait(0);
-    equal(pitchItem.textContent, "Save this air-gapped bitcoin calculator to a removable drive and open it on a computer that never goes online.", "Switching back did not restore the English original");
+    equal(pitchItem.textContent, "You bring the entropy — dice rolls, a seed phrase, or a key you already have.", "Switching back did not restore the English original");
+    equal(kicker.textContent, "Run Offline · Bring your own entropy", "Switching back did not restore the English kicker");
     equal(modeOption.textContent, "Dice rolls", "The method dropdown did not restore English");
     assert(localStorage.getItem("entropylab-locale") === "en", "The locale choice should be stored as English again");
   });
