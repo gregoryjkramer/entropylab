@@ -358,6 +358,42 @@ test("network selects the application id and best-block locator", () => {
   assert.throws(() => buildWalletRecords({ ...WATCH_ONLY_WALLET, network: "signet" }, false, deps, REF_CREATION_TIME), /unknown network/);
 });
 
+test("descriptor ranges cover displayed addresses plus a recovery gap", () => {
+  const { buildWalletRecords, walletDescriptorUnits } = loadModule();
+  const wallet = structuredClone(WATCH_ONLY_WALLET);
+  wallet.accounts[0].addressBranches = [
+    { branch: 0, rows: [{ index: 5000 }, { index: 5001 }, { index: 5002 }] },
+    { branch: 1, rows: [{ index: 7000 }] },
+  ];
+
+  const units = walletDescriptorUnits(wallet, false);
+  assert.deepEqual(
+    units.slice(0, 2).map(({ nextIndex, rangeStart, rangeEnd }) => ({ nextIndex, rangeStart, rangeEnd })),
+    [
+      { nextIndex: 5003, rangeStart: 5000, rangeEnd: 6002 },
+      { nextIndex: 7001, rangeStart: 7000, rangeEnd: 8000 },
+    ],
+  );
+
+  const records = buildWalletRecords(wallet, false, deps, REF_CREATION_TIME);
+  const descriptorValues = records
+    .filter(([key]) => key[0] === 16 && new TextDecoder().decode(key.slice(1, 17)) === "walletdescriptor")
+    .map(([, value]) => Buffer.from(value));
+  const readRange = (value) => {
+    const first = value[0];
+    const lengthBytes = first < 253 ? 1 : first === 253 ? 3 : first === 254 ? 5 : 9;
+    const descriptorLength = first < 253 ? first : first === 253 ? value.readUInt16LE(1) : first === 254 ? value.readUInt32LE(1) : Number(value.readBigUInt64LE(1));
+    const offset = lengthBytes + descriptorLength + 8;
+    return {
+      nextIndex: value.readUInt32LE(offset),
+      rangeStart: value.readUInt32LE(offset + 4),
+      rangeEnd: value.readUInt32LE(offset + 8),
+    };
+  };
+  assert.deepEqual(readRange(descriptorValues[0]), { nextIndex: 5003, rangeStart: 5000, rangeEnd: 6002 });
+  assert.deepEqual(readRange(descriptorValues[1]), { nextIndex: 7001, rangeStart: 7000, rangeEnd: 8000 });
+});
+
 test("button gating: only HD wallets with descriptors", () => {
   const { hasDescriptors } = loadModule();
   assert.equal(hasDescriptors(null), false);

@@ -25,7 +25,8 @@ var hodlWalletExport = (() => {
 
   const RECORD_VERSION = 280300; // last client version seen by the reference files
   const RECORD_MINVERSION = 169900; // FEATURE_PRE_SPLIT_KEYPOOL; every Core with descriptor support accepts it
-  const RANGE_END = 1000; // importdescriptors default active range
+  const RANGE_END = 1000; // Core's default lookahead, retained beyond the displayed window
+  const MAX_ADDRESS_INDEX = 0x7fffffff;
 
   // Wallet flags (walletutil.h): DESCRIPTORS | BLANK, plus DISABLE_PRIVATE_KEYS for watch-only.
   const FLAG_DISABLE_PRIVATE_KEYS = 1n << 32n;
@@ -146,11 +147,23 @@ var hodlWalletExport = (() => {
       for (const branch of [0, 1]) {
         const descriptor = branch === 0 ? account.receiveDescriptor : account.changeDescriptor;
         const privateDescriptor = branch === 0 ? account.receiveDescriptorPriv : account.changeDescriptorPriv;
+        const branchRows = account.addressBranches?.find((entry) => entry.branch === branch)?.rows;
+        const rows = Array.isArray(branchRows) ? branchRows : branch === 0 ? account.receive : account.change;
+        const indexes = Array.isArray(rows)
+          ? rows.map((row) => row?.index).filter((index) => Number.isSafeInteger(index) && index >= 0 && index <= MAX_ADDRESS_INDEX)
+          : [];
+        const rangeStart = indexes.length ? Math.min(...indexes) : 0;
+        const displayedEnd = indexes.length ? Math.max(...indexes) : 0;
+        const rangeEnd = indexes.length ? Math.min(MAX_ADDRESS_INDEX, displayedEnd + RANGE_END) : RANGE_END;
+        const nextIndex = indexes.length ? Math.min(MAX_ADDRESS_INDEX, displayedEnd + 1) : 0;
         units.push({
           type,
           internal: branch === 1,
           descriptor,
           privateDescriptor: includePrivate ? privateDescriptor : null,
+          nextIndex,
+          rangeStart,
+          rangeEnd,
         });
       }
     }
@@ -193,7 +206,7 @@ var hodlWalletExport = (() => {
 
       push(
         concat(streamString("walletdescriptor"), id),
-        concat(streamString(stored), u64le(creationTime), u32le(0), u32le(0), u32le(RANGE_END)),
+        concat(streamString(stored), u64le(creationTime), u32le(unit.nextIndex), u32le(unit.rangeStart), u32le(unit.rangeEnd)),
       );
 
       const xpub = extractExtendedKey(stored, "watch-only");
