@@ -3,7 +3,9 @@
 This is Gregory Kramer's personal fork. Hermes Agent (grok-4.6) is being
 onboarded here as a practice teammate. The official project remains
 https://github.com/OogaBoogaX/entropylab. Do not put API keys, Hermes
-config, seeds, or .env files in this repo.
+config, seeds, or .env files in this repo. How the network and its agent
+teammates organise work is proposed in
+[docs/Enterprise_Scrum_Getting_Started.md](docs/Enterprise_Scrum_Getting_Started.md).
 
 EntropyLab is a self-contained Bitcoin key and wallet calculator designed for
 offline, air-gapped use. It converts user-supplied entropy, seed phrases, and

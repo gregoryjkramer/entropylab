@@ -1,0 +1,29 @@
+name: Cycle sync / retro
+description: One issue per team per cycle. Teammates, agents included, comment done / next / blocked; the retro fills the last section at cycle end.
+title: "<team> · cycle <YYYY-Www> sync"
+labels: []
+body:
+  - type: input
+    id: goal
+    attributes:
+      label: Cycle goal
+      description: One sentence. Link the milestone if there is one.
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        **How to use this issue.** Each teammate posts a comment when they have
+        something to report, at least once per cycle, using three lines:
+        `done:` / `next:` / `blocked:`. A `blocked:` line names the exact question
+        a human must answer. Cross-team blockers become an issue labelled
+        `impediment`. The Lab Coach reads all team syncs and posts a roll-up.
+  - type: textarea
+    id: retro
+    attributes:
+      label: Retro (fill at cycle end)
+      value: |
+        Keep:
+        Change:
+        One experiment for next cycle:
+        Team happiness (1–5):

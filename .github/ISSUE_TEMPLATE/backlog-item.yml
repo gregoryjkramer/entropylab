@@ -1,0 +1,44 @@
+name: Backlog item
+description: A Value List item a human or agent can pull. Ready means scope, non-scope, and the proving test are named.
+title: "<short imperative summary>"
+labels: []
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What changes for the user or the auditor, and why. Two to four sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: The files or areas that may change. Sources in src/ and the Rust crates only, never generated artifacts.
+      placeholder: "src/shell.html, test/ui-defaults.test.mjs"
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: What must not change. Locales, wasm artifacts, entropylab.html, and key-derivation code unless the item is about them.
+    validations:
+      required: true
+  - type: textarea
+    id: proof
+    attributes:
+      label: Test that proves it
+      description: The existing or new test that fails before and passes after. Published vectors preferred.
+    validations:
+      required: true
+  - type: checkboxes
+    id: dod
+    attributes:
+      label: Definition of Done (CONTRIBUTING.md, final sanity check)
+      options:
+        - label: Never invents entropy
+        - label: Stays silent on the network
+        - label: Output is still one self-contained entropylab.html, no bigger than before
+        - label: Rebuilt, docs and version in sync, no generated files committed
+        - label: An auditor can follow the change in one pass

@@ -1,0 +1,54 @@
+name: Agent task
+description: A ticket assigned to an AI agent teammate. Prefix the title with [agent]. See docs/Enterprise_Scrum_Getting_Started.md section 6.
+title: "[agent] <short imperative summary>"
+labels: ["agent"]
+body:
+  - type: dropdown
+    id: rung
+    attributes:
+      label: Onboarding rung
+      description: The agent does not advance a rung until a human closed the previous rung's PR.
+      options:
+        - "0 · Smoke test (comment, wait, comment, close)"
+        - "1 · Docs-only change"
+        - "2 · Source change with a test"
+        - "3 · Triage (labels and cross-references, no code)"
+        - "4 · Distribution (propose assignees, humans accept)"
+        - "5 · Cycle sync roll-up"
+        - "6 · Retro support"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Self-contained instructions. The agent acts only on this issue body, not on later comments from other accounts.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Exact files the agent may edit. Branch name agent/<slug> in this fork.
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      value: |
+        Do not edit src/locales/, entropylab.html, or src/js/*-wasm-b64.js.
+        Do not generate entropy, add network calls, or handle real seeds or keys.
+        Do not open a PR against OogaBoogaX/entropylab.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Report back
+      value: |
+        Open a PR that closes this issue. In the PR body list every command run
+        (at least `npm run build && npm test`) with its exit status. A human reads
+        the whole diff before merging.
+    validations:
+      required: true
