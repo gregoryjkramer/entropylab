@@ -9226,12 +9226,26 @@ function hodlSessionOwnership(network) {
 }
 function hodlDeclaredOutput(entries, script, network) {
   if (!hodlPsbtHd || !entries || !script) return null;
-  let fingerprint = hodlFingerprintHex(hodlPsbtHd.fingerprint), declared = null;
+  let fingerprint = hodlFingerprintHex(hodlPsbtHd.fingerprint), declared = null, claims = [];
   for (let entry of hodlFind(entries, 2)) {
     if (entry.val.length < 4 || (entry.val.length - 4) % 4) continue;
-    let fp = hodlHex.encode(entry.val.slice(0, 4));
+    claims.push({ keydata: entry.keydata, fpVal: entry.val });
+  }
+  // BIP-371 PSBT_OUT_TAP_BIP32_DERIVATION (type 7): compact_size(n) ||
+  // n × 32-byte leaf hashes || 4-byte fingerprint || little-endian path.
+  // A creator-chosen tap record is the same #194 attack with a different
+  // key type; skip only malformed values, never the whole class.
+  for (let entry of hodlFind(entries, 7)) {
+    if (!entry.val.length || entry.val[0] >= 253) continue;
+    let offset = 1 + entry.val[0] * 32;
+    if (entry.val.length < offset + 4 || (entry.val.length - offset - 4) % 4) continue;
+    claims.push({ keydata: entry.keydata, fpVal: entry.val.subarray(offset) });
+  }
+  for (let claim of claims) {
+    let fpVal = claim.fpVal;
+    let fp = hodlHex.encode(fpVal.slice(0, 4));
     let path = [];
-    for (let i = 4; i < entry.val.length; i += 4) path.push(new DataView(entry.val.buffer, entry.val.byteOffset + i, 4).getUint32(0, true));
+    for (let i = 4; i < fpVal.length; i += 4) path.push(new DataView(fpVal.buffer, fpVal.byteOffset + i, 4).getUint32(0, true));
     let label = "m/" + pathLabel(path);
     // A foreign-fingerprint record says nothing about this wallet, and an
     // output map may carry several records (multisig cosigners) in an order
@@ -9245,7 +9259,9 @@ function hodlDeclaredOutput(entries, script, network) {
     try {
       let node = hodlPsbtHd;
       for (let index of path) node = node.deriveChild(index);
-      if (!node.publicKey || !hodlEq(node.publicKey, entry.keydata)) return { state: "lie", path: label };
+      let pub = node.publicKey, key = claim.keydata;
+      let keyOk = pub && (key.length === 33 ? hodlEq(pub, key) : key.length === 32 && hodlEq(pub.slice(1), key));
+      if (!keyOk) return { state: "lie", path: label };
       let address = hodlAddr(script, network);
       let encoded = false;
       for (let scriptType of ["p2pkh", "p2sh-p2wpkh", "p2wpkh", "p2tr"]) {

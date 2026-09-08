@@ -13,7 +13,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { HDKey } from "../src/js/hdkey.js";
 import { mnemonicToSeedSync } from "../src/js/bip39.js";
 import { indexHdKey } from "../src/js/ownership.js";
-import { multisigScript, p2wpkhScript, p2wshScript } from "../src/js/addresses.js";
+import { multisigScript, p2trKeyScript, p2wpkhScript, p2wshScript } from "../src/js/addresses.js";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const app = readFileSync(join(root, "src/js/app.js"), "utf8");
@@ -100,6 +100,13 @@ const cosignerNode = cosigner.derive("m/48'/0'/0'/2'/0/0");
 
 const changeScript = p2wpkhScript(changeNode.publicKey);
 const foreignScript = p2wpkhScript(foreignNode.publicKey);
+const changeTapScript = p2trKeyScript(changeNode.publicKey.slice(1));
+const foreignTapScript = p2trKeyScript(foreignNode.publicKey.slice(1));
+const tapDerivation = (xonly, fingerprint, path, leafHashes = []) => ({
+  type: 7, // PSBT_OUT_TAP_BIP32_DERIVATION (BIP-371)
+  keydata: xonly,
+  val: concat(Uint8Array.of(leafHashes.length), ...leafHashes, u32be(fingerprint), ...path.map(u32le)),
+});
 
 // An honest record from another wallet.
 const foreignRecord = derivation(foreignNode, foreign.fingerprint, receivePath);
@@ -191,4 +198,28 @@ test("no session key declares nothing", () => {
   } finally {
     hodlSetSession(hd);
   }
+});
+
+test("a taproot BIP-371 derivation lie is still a lie (type 7, not only type 2)", () => {
+  const falseTapKey = tapDerivation(foreignNode.publicKey.slice(1), hd.fingerprint, receivePath);
+  const falseTapScript = tapDerivation(receiveNode.publicKey.slice(1), hd.fingerprint, receivePath);
+  const foreignTap = tapDerivation(foreignNode.publicKey.slice(1), foreign.fingerprint, receivePath);
+  assert.equal(hodlDeclaredOutput([falseTapKey], foreignTapScript, "mainnet").state, "lie");
+  assert.equal(hodlDeclaredOutput([falseTapScript], foreignTapScript, "mainnet").state, "lie");
+  for (const records of permutations([foreignTap, falseTapKey])) {
+    assert.equal(hodlDeclaredOutput(records, foreignTapScript, "mainnet").state, "lie");
+  }
+});
+
+test("a valid taproot BIP-371 claim still verifies as ours", () => {
+  const validTap = tapDerivation(changeNode.publicKey.slice(1), hd.fingerprint, changePath);
+  const foreignTap = tapDerivation(foreignNode.publicKey.slice(1), foreign.fingerprint, receivePath);
+  const leaf = tapDerivation(changeNode.publicKey.slice(1), hd.fingerprint, changePath, [new Uint8Array(32).fill(3)]);
+  for (const records of permutations([foreignTap, validTap])) {
+    const declared = hodlDeclaredOutput(records, changeTapScript, "mainnet");
+    assert.equal(declared.state, "ours");
+    assert.equal(declared.role, "change");
+    assert.equal(declared.path, "m/84h/0h/0h/1/5");
+  }
+  assert.equal(hodlDeclaredOutput([leaf], changeTapScript, "mainnet").state, "ours");
 });
